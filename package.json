@@ -1,0 +1,5 @@
+{
+  "name": "dockerised-rails5-sample-and-circleci",
+  "private": true,
+  "dependencies": {}
+}
