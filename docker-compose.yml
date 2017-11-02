@@ -1,0 +1,114 @@
+version: '2.3'
+volumes:
+  mysql-data:
+    driver: local
+  redis-data:
+    driver: local
+  esdata1:
+    driver: local
+  # esdata2:
+  #   driver: local
+services:
+  db:
+    container_name: sample_db
+    image: mysql:5.7
+    ports:
+      - 3306:3306
+    volumes:
+      - mysql-data:/var/lib/mysql
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+  cache:
+    image: redis:alpine
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis-data:/data
+  elasticsearch1:
+    image: docker.elastic.co/elasticsearch/elasticsearch:5.6.3
+    container_name: sample_elasticsearch1
+    command: /bin/sh -c "if [ `elasticsearch-plugin list | grep analysis-kuromoji` ]; then echo 'already installed'; else elasticsearch-plugin install analysis-kuromoji; fi && elasticsearch -E 'cluster.name=makeup-es-cluster' -E 'bootstrap.memory_lock=true' -E 'transport.host=localhost' -E 'bootstrap.system_call_filter=false'"
+    environment:
+      - cluster.name=sample-es-cluster
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    mem_limit: 1g
+    volumes:
+      - esdata1:/usr/share/elasticsearch/data
+    ports:
+      - 9200:9200
+    networks:
+      - esnet
+  # elasticsearch2:
+  #   image: docker.elastic.co/elasticsearch/elasticsearch:5.6.3
+  #   environment:
+  #     - cluster.name=sample-es-cluster
+  #     - bootstrap.memory_lock=true
+  #     - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+  #     - "discovery.zen.ping.unicast.hosts=elasticsearch1"
+  #   ulimits:
+  #     memlock:
+  #       soft: -1
+  #       hard: -1
+  #   mem_limit: 1g
+  #   volumes:
+  #     - esdata2:/usr/share/elasticsearch/data
+  #   networks:
+  #     - esnet
+  kibana:
+    image: docker.elastic.co/kibana/kibana:5.6.3
+    ports:
+      - 5601:5601
+    networks:
+      - esnet
+    links:
+      - elasticsearch1:elasticsearch
+    depends_on:
+      - elasticsearch1
+    environment:
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+  rails_sample:
+    container_name: rails_sample
+    stdin_open: true
+    tty: true
+    command: /bin/sh -c "rm -f ./tmp/pids/server.pid && bundle exec rails s -p 3000 -b '0.0.0.0'"
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      RAILS_ENV: development
+      DB_HOST: db
+      REDIS_URL: "redis://cache:6379"
+    volumes:
+      - .:/sample-server
+    ports:
+      - "3000:3000"
+    networks:
+      - default
+      - esnet
+    depends_on:
+      - db
+      - cache
+      - elasticsearch1
+    links:
+      - elasticsearch1:elasticsearch
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: bundle exec sidekiq -q notification
+    environment:
+      RAILS_ENV: development
+      REDIS_URL: "redis://cache:6379"
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+      - cache
+
+networks:
+  esnet:
