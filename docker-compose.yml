@@ -27,7 +27,7 @@ services:
   elasticsearch1:
     image: docker.elastic.co/elasticsearch/elasticsearch:5.6.3
     container_name: sample_elasticsearch1
-    command: /bin/sh -c "if [ `elasticsearch-plugin list | grep analysis-kuromoji` ]; then echo 'already installed'; else elasticsearch-plugin install analysis-kuromoji; fi && elasticsearch -E 'cluster.name=makeup-es-cluster' -E 'bootstrap.memory_lock=true' -E 'transport.host=localhost' -E 'bootstrap.system_call_filter=false'"
+    command: /bin/sh -c "if [ `elasticsearch-plugin list | grep analysis-kuromoji` ]; then echo 'already installed'; else elasticsearch-plugin install analysis-kuromoji; fi && elasticsearch -E 'cluster.name=sample-es-cluster' -E 'bootstrap.memory_lock=true' -E 'transport.host=localhost' -E 'bootstrap.system_call_filter=false'"
     environment:
       - cluster.name=sample-es-cluster
       - bootstrap.memory_lock=true
