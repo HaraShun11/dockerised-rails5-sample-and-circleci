@@ -1,4 +1,4 @@
-# Eutopia Server
+# dockerised-rails5-sample-and-circleci
 
 # Dependency
 - Docker
