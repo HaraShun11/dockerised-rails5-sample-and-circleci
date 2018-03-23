@@ -10,7 +10,7 @@ volumes:
   #   driver: local
 services:
   db:
-    container_name: sample_db
+    container_name: sample_mysql
     image: mysql:5.7
     ports:
       - 3306:3306
@@ -19,6 +19,7 @@ services:
     environment:
       MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
   cache:
+    container_name: sample_redis
     image: redis:alpine
     ports:
       - '6379:6379'
@@ -45,6 +46,7 @@ services:
       - esnet
   # elasticsearch2:
   #   image: docker.elastic.co/elasticsearch/elasticsearch:5.6.3
+  #   container_name: sample_elasticsearch2
   #   environment:
   #     - cluster.name=sample-es-cluster
   #     - bootstrap.memory_lock=true
@@ -61,6 +63,7 @@ services:
   #     - esnet
   kibana:
     image: docker.elastic.co/kibana/kibana:5.6.3
+    container_name: sample_kibana
     ports:
       - 5601:5601
     networks:
@@ -72,7 +75,7 @@ services:
     environment:
       - ELASTICSEARCH_URL=http://elasticsearch:9200
   rails_sample:
-    container_name: rails_sample
+    container_name: sample_rails
     stdin_open: true
     tty: true
     command: /bin/sh -c "rm -f ./tmp/pids/server.pid && bundle exec rails s -p 3000 -b '0.0.0.0'"
@@ -85,6 +88,7 @@ services:
       REDIS_URL: "redis://cache:6379"
     volumes:
       - .:/sample-server
+      - ./config/encrypted_secrets.yml:/eutopia-server/config/secrets.yml
     ports:
       - "3000:3000"
     networks:
@@ -97,15 +101,17 @@ services:
     links:
       - elasticsearch1:elasticsearch
   worker:
+    container_name: sample_worker
     build:
       context: .
       dockerfile: Dockerfile
-    command: bundle exec sidekiq -q notification
+    command: bundle exec sidekiq
     environment:
       RAILS_ENV: development
       REDIS_URL: "redis://cache:6379"
     volumes:
-      - .:/app
+      - .:/sample_worker
+      - ./config/encrypted_secrets.yml:/eutopia-server/config/secrets.yml
     depends_on:
       - db
       - cache

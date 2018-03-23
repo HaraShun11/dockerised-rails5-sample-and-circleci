@@ -10,7 +10,5 @@ RUN bundle config build.nokogiri --use-system-libraries && \
     bundle config build.mysql2 --use-system-libraries && \
     bundle install --jobs 20 --retry 5
 
-ENV APP_HOME /makeup-server
-RUN mkdir -p $APP_HOME
+ENV APP_HOME /sample-server
 WORKDIR $APP_HOME
-ADD . $APP_HOME
